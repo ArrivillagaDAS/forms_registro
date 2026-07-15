@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Registro de usuario</title>
+
+<!-- SDK oficial de Telegram: de aquí sacamos el ID real del usuario -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<style>
+  /*
+    Estas variables se rellenan con los colores del tema de Telegram
+    (claro u oscuro, el que tenga el usuario) con un fallback por si
+    se abre el archivo fuera de Telegram para hacer pruebas.
+  */
+  :root{
+    --bg:            var(--tg-theme-bg-color, #ffffff);
+    --bg-secondary:  var(--tg-theme-secondary-bg-color, #f2f2f7);
+    --text:          var(--tg-theme-text-color, #1c1c1e);
+    --hint:          var(--tg-theme-hint-color, #8e8e93);
+    --link:          var(--tg-theme-link-color, #2481cc);
+    --button:        var(--tg-theme-button-color, #2481cc);
+    --button-text:   var(--tg-theme-button-text-color, #ffffff);
+    --border:        rgba(140,140,140,0.25);
+    --error:         #e53935;
+    --ok:            #2fa84f;
+  }
+
+  *{ box-sizing:border-box; }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:var(--bg);
+    color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;
+    justify-content:center;
+    padding:24px 16px 40px;
+  }
+
+  .card{
+    width:100%;
+    max-width:420px;
+  }
+
+  h1{
+    font-size:20px;
+    font-weight:600;
+    margin:8px 0 4px;
+  }
+
+  .subtitle{
+    color:var(--hint);
+    font-size:14px;
+    margin:0 0 20px;
+    line-height:1.4;
+  }
+
+  /* Chip que muestra si detectamos o no un ID real de Telegram */
+  .id-chip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:var(--bg-secondary);
+    margin-bottom:20px;
+    font-size:13px;
+  }
+  .id-chip .dot{
+    width:8px;height:8px;border-radius:50%;
+    flex-shrink:0;
+  }
+  .id-chip.ok .dot{ background:var(--ok); }
+  .id-chip.error .dot{ background:var(--error); }
+  .id-chip strong{ font-weight:600; }
+  .id-chip.error{ color:var(--error); }
+
+  form{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+  }
+
+  label{
+    font-size:13px;
+    font-weight:600;
+    color:var(--hint);
+    margin-bottom:6px;
+    display:block;
+  }
+
+  input{
+    width:100%;
+    padding:12px 14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--bg-secondary);
+    color:var(--text);
+    font-size:15px;
+    outline:none;
+  }
+  input:focus{
+    border-color:var(--link);
+  }
+  input.invalid{
+    border-color:var(--error);
+  }
+
+  .field-error{
+    color:var(--error);
+    font-size:12px;
+    margin-top:4px;
+    min-height:14px;
+  }
+
+  button[type="submit"]{
+    margin-top:10px;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    background:var(--button);
+    color:var(--button-text);
+    font-size:16px;
+    font-weight:600;
+    cursor:pointer;
+  }
+  button[type="submit"]:disabled{
+    opacity:0.5;
+    cursor:not-allowed;
+  }
+
+  .status-msg{
+    margin-top:16px;
+    font-size:14px;
+    text-align:center;
+    min-height:20px;
+  }
+  .status-msg.ok{ color:var(--ok); }
+  .status-msg.error{ color:var(--error); }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>Registro de usuario</h1>
+  <p class="subtitle">Completa tus datos para registrarte. Tu ID de Telegram se toma automáticamente, no hace falta escribirlo.</p>
+
+  <!-- Aquí mostramos si se detectó el ID real de Telegram -->
+  <div id="idChip" class="id-chip">
+    <span class="dot"></span>
+    <span id="idChipText">Buscando tu ID de Telegram…</span>
+  </div>
+
+  <form id="registroForm" novalidate>
+    <div>
+      <label for="nombre">Nombre</label>
+      <input id="nombre" name="nombre" type="text" autocomplete="given-name" required>
+      <div class="field-error" id="err-nombre"></div>
+    </div>
+
+    <div>
+      <label for="apellido">Apellido</label>
+      <input id="apellido" name="apellido" type="text" autocomplete="family-name" required>
+      <div class="field-error" id="err-apellido"></div>
+    </div>
+
+    <div>
+      <label for="gmail">Correo de Gmail</label>
+      <input id="gmail" name="gmail" type="email" autocomplete="email" placeholder="tunombre@gmail.com" required>
+      <div class="field-error" id="err-gmail"></div>
+    </div>
+
+    <div>
+      <label for="telefono">Número telefónico</label>
+      <input id="telefono" name="telefono" type="tel" autocomplete="tel" placeholder="+502 5555 5555" required>
+      <div class="field-error" id="err-telefono"></div>
+    </div>
+
+    <button type="submit" id="submitBtn">Registrarme</button>
+    <div class="status-msg" id="statusMsg"></div>
+  </form>
+</div>
+
+<script>
+/*
+  ==========================================================================
+  CONFIGURACIÓN: pega aquí la URL del nodo Webhook de n8n
+  (Producción o Test, según lo que estés usando)
+  ==========================================================================
+*/
+const CONFIG = {
+  webhookUrl: "https://TU-INSTANCIA-N8N.com/webhook/registro-usuario"
+};
+
+// ---- 1. Inicializar Telegram WebApp y obtener el ID real -----------------
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+let telegramUser = null;
+
+if (tg) {
+  tg.ready();
+  tg.expand();
+  telegramUser = tg.initDataUnsafe && tg.initDataUnsafe.user ? tg.initDataUnsafe.user : null;
+}
+
+const idChip = document.getElementById("idChip");
+const idChipText = document.getElementById("idChipText");
+const submitBtn = document.getElementById("submitBtn");
+
+if (telegramUser && telegramUser.id) {
+  idChip.classList.add("ok");
+  idChipText.innerHTML = "ID de Telegram detectado: <strong>" + telegramUser.id + "</strong>";
+} else {
+  idChip.classList.add("error");
+  idChipText.textContent = "No se detectó un ID de Telegram. Abre este formulario desde el botón/enlace de tu bot en Telegram, no en un navegador normal.";
+  submitBtn.disabled = true; // No dejamos enviar si no hay un ID real
+}
+
+// ---- 2. Validaciones ------------------------------------------------------
+function setError(fieldId, message) {
+  document.getElementById("err-" + fieldId).textContent = message || "";
+  document.getElementById(fieldId).classList.toggle("invalid", !!message);
+}
+
+function validate(data) {
+  let valid = true;
+
+  if (!data.nombre.trim()) { setError("nombre", "Escribe tu nombre."); valid = false; }
+  else setError("nombre", "");
+
+  if (!data.apellido.trim()) { setError("apellido", "Escribe tu apellido."); valid = false; }
+  else setError("apellido", "");
+
+  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+  if (!gmailRegex.test(data.gmail.trim())) { setError("gmail", "Debe ser un correo válido de @gmail.com"); valid = false; }
+  else setError("gmail", "");
+
+  const telRegex = /^[+]?[\d\s()-]{7,20}$/;
+  if (!telRegex.test(data.telefono.trim())) { setError("telefono", "Escribe un número telefónico válido."); valid = false; }
+  else setError("telefono", "");
+
+  return valid;
+}
+
+// ---- 3. Envío hacia n8n ---------------------------------------------------
+const form = document.getElementById("registroForm");
+const statusMsg = document.getElementById("statusMsg");
+
+form.addEventListener("submit", async function (e) {
+  e.preventDefault();
+
+  if (!telegramUser || !telegramUser.id) return; // seguridad extra
+
+  const data = {
+    nombre: document.getElementById("nombre").value,
+    apellido: document.getElementById("apellido").value,
+    gmail: document.getElementById("gmail").value,
+    telefono: document.getElementById("telefono").value
+  };
+
+  if (!validate(data)) return;
+
+  const payload = {
+    telegram_id: telegramUser.id,
+    telegram_username: telegramUser.username || null,
+    nombre: data.nombre.trim(),
+    apellido: data.apellido.trim(),
+    gmail: data.gmail.trim(),
+    telefono: data.telefono.trim(),
+    fecha_registro: new Date().toISOString()
+  };
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Enviando…";
+  statusMsg.className = "status-msg";
+  statusMsg.textContent = "";
+
+  try {
+    const response = await fetch(CONFIG.webhookUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) throw new Error("Respuesta no válida del servidor (" + response.status + ")");
+
+    statusMsg.classList.add("ok");
+    statusMsg.textContent = "¡Registro enviado! Ya puedes cerrar esta ventana.";
+    form.reset();
+    if (tg) setTimeout(() => tg.close(), 1500);
+
+  } catch (err) {
+    statusMsg.classList.add("error");
+    statusMsg.textContent = "No se pudo enviar el registro. Inténtalo de nuevo.";
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Registrarme";
+  }
+});
+</script>
+</body>
+</html>
