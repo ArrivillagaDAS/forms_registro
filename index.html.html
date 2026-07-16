@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Registro</title>
+    <style>
+        /* Reset básico y tipografía */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f4f6f9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Contenedor del Formulario */
+        .form-container {
+            background-color: #ffffff;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 450px;
+            border-top: 4px solid #1e293b; /* Detalle formal en azul pizarra oscuro */
+        }
+
+        h2 {
+            color: #0f172a;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            color: #64748b;
+            font-size: 14px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+
+        /* Grupos de entrada */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #334155;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 15px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            color: #1e293b;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1e293b;
+            box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
+        }
+
+        /* Botón de envío */
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #ffffff;
+            background-color: #1e293b;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background-color: #0f172a;
+        }
+
+        button:disabled {
+            background-color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Mensajes de feedback */
+        .message {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .message.success {
+            display: block;
+            background-color: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .message.error {
+            display: block;
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="form-container">
+        <h2>Formulario de Contacto</h2>
+        <p class="subtitle">Por favor, complete los siguientes datos para continuar.</p>
+        
+        <form id="n8n-form">
+            <div class="form-group">
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" name="nombre" required placeholder="Ej. Juan">
+            </div>
+
+            <div class="form-group">
+                <label for="apellido">Apellido</label>
+                <input type="text" id="apellido" name="apellido" required placeholder="Ej. Pérez">
+            </div>
+
+            <div class="form-group">
+                <label for="gmail">Correo Electrónico (Gmail)</label>
+                <input type="email" id="gmail" name="gmail" required placeholder="ejemplo@gmail.com" pattern="[a-zA-Z0-9._%+-]+@gmail\.com$" title="Por favor, introduce una dirección de correo de Gmail válida.">
+            </div>
+
+            <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono" required placeholder="Ej. +502 1234 5678">
+            </div>
+
+            <button type="submit" id="submit-btn">Enviar Información</button>
+        </form>
+        
+        <div id="form-message" class="message"></div>
+    </div>
+
+    <script>
+        document.getElementById('n8n-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            // REEMPLAZA ESTO CON LA URL DE TU WEBHOOK DE N8N
+            const N8N_WEBHOOK_URL = 'TU_URL_DE_WEBHOOK_AQUI';
+
+            const submitBtn = document.getElementById('submit-btn');
+            const messageDiv = document.getElementById('form-message');
+
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Enviando...';
+            
+            messageDiv.className = 'message';
+            messageDiv.style.display = 'none';
+
+            const payload = {
+                nombre: document.getElementById('nombre').value.trim(),
+                apellido: document.getElementById('apellido').value.trim(),
+                gmail: document.getElementById('gmail').value.trim(),
+                telefono: document.getElementById('telefono').value.trim(),
+                timestamp: new Date().toISOString()
+            };
+
+            try {
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    messageDiv.textContent = '¡Información enviada con éxito!';
+                    messageDiv.classList.add('success');
+                    document.getElementById('n8n-form').reset();
+                } else {
+                    throw new Error(`Error en el servidor: ${response.statusText}`);
+                }
+            } catch (error) {
+                console.error('Error al conectar con n8n:', error);
+                messageDiv.textContent = 'Hubo un inconveniente al enviar los datos. Intente de nuevo.';
+                messageDiv.classList.add('error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Enviar Información';
+            }
+        });
+    </script>
+</body>
+</html>
