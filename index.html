@@ -161,16 +161,14 @@
         <div id="form-message" class="message"></div>
     </div>
 
-<script>
+    <script>
     document.getElementById('n8n-form').addEventListener('submit', async function(event) {
         event.preventDefault();
 
-        // NUEVO: leer el chat_id que viene en la URL (ej: ?chat_id=12345)
         const urlParams = new URLSearchParams(window.location.search);
         const telegramId = urlParams.get('chat_id');
 
-        // REEMPLAZA ESTO CON LA URL DE TU WEBHOOK DE N8N
-        const N8N_WEBHOOK_URL = 'https://gummy-aerosol-deforest.ngrok-free.dev/webhook-test/registro-tutorbot';
+        const N8N_WEBHOOK_URL = 'https://gummy-aerosol-deforest.ngrok-free.dev/webhook/registro-tutorbot';
 
         const submitBtn = document.getElementById('submit-btn');
         const messageDiv = document.getElementById('form-message');
@@ -199,9 +197,12 @@
             });
 
             if (response.ok) {
-                messageDiv.textContent = '¡Información enviada con éxito!';
+                // ---- ESTE ES EL CAMBIO ----
+                const data = await response.json();
+                messageDiv.innerHTML = `${data.mensaje}<br><strong>Tu código: ${data.codigo_acceso}</strong>`;
                 messageDiv.classList.add('success');
                 document.getElementById('n8n-form').reset();
+                // ---------------------------
             } else {
                 throw new Error(`Error en el servidor: ${response.statusText}`);
             }
