@@ -161,54 +161,59 @@
         <div id="form-message" class="message"></div>
     </div>
 
-    <script>
-        document.getElementById('n8n-form').addEventListener('submit', async function(event) {
-            event.preventDefault();
+<script>
+    document.getElementById('n8n-form').addEventListener('submit', async function(event) {
+        event.preventDefault();
 
-            // REEMPLAZA ESTO CON LA URL DE TU WEBHOOK DE N8N
-            const N8N_WEBHOOK_URL = 'https://gummy-aerosol-deforest.ngrok-free.dev/webhook-test/4af7cdb9-1012-49d7-9697-2671285aea4f';
+        // NUEVO: leer el chat_id que viene en la URL (ej: ?chat_id=12345)
+        const urlParams = new URLSearchParams(window.location.search);
+        const telegramId = urlParams.get('chat_id');
 
-            const submitBtn = document.getElementById('submit-btn');
-            const messageDiv = document.getElementById('form-message');
+        // REEMPLAZA ESTO CON LA URL DE TU WEBHOOK DE N8N
+        const N8N_WEBHOOK_URL = 'https://gummy-aerosol-deforest.ngrok-free.dev/webhook-test/4af7cdb9-1012-49d7-9697-2671285aea4f';
 
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Enviando...';
-            
-            messageDiv.className = 'message';
+        const submitBtn = document.getElementById('submit-btn');
+        const messageDiv = document.getElementById('form-message');
 
-            const payload = {
-                nombre: document.getElementById('nombre').value.trim(),
-                apellido: document.getElementById('apellido').value.trim(),
-                gmail: document.getElementById('gmail').value.trim(),
-                telefono: document.getElementById('telefono').value.trim(),
-                timestamp: new Date().toISOString()
-            };
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        
+        messageDiv.className = 'message';
 
-            try {
-                const response = await fetch(N8N_WEBHOOK_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
+        const payload = {
+            nombre: document.getElementById('nombre').value.trim(),
+            apellido: document.getElementById('apellido').value.trim(),
+            gmail: document.getElementById('gmail').value.trim(),
+            telefono: document.getElementById('telefono').value.trim(),
+            telegram_id: telegramId,
+            timestamp: new Date().toISOString()
+        };
 
-                if (response.ok) {
-                    messageDiv.textContent = '¡Información enviada con éxito!';
-                    messageDiv.classList.add('success');
-                    document.getElementById('n8n-form').reset();
-                } else {
-                    throw new Error(`Error en el servidor: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error('Error al conectar con n8n:', error);
-                messageDiv.textContent = 'Hubo un inconveniente al enviar los datos. Intente de nuevo.';
-                messageDiv.classList.add('error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.textContent = 'Enviar Información';
+        try {
+            const response = await fetch(N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                messageDiv.textContent = '¡Información enviada con éxito!';
+                messageDiv.classList.add('success');
+                document.getElementById('n8n-form').reset();
+            } else {
+                throw new Error(`Error en el servidor: ${response.statusText}`);
             }
-        });
-    </script>
+        } catch (error) {
+            console.error('Error al conectar con n8n:', error);
+            messageDiv.textContent = 'Hubo un inconveniente al enviar los datos. Intente de nuevo.';
+            messageDiv.classList.add('error');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Enviar Información';
+        }
+    });
+</script>
 </body>
 </html>
